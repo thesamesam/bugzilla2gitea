@@ -21,3 +21,4 @@ Set of tools to convert from Bugzilla to Gitea (possibly Gogs). Assumes Gitea is
 ## Prerequisites
 - DBD::MySQL (Debian-like: libdbd-mysql-perl)
 - LWP::UserAgent (Debian-like: libwww-perl)
+- Date::Parse (Debian-like: libtimedate-perl)
