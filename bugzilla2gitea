@@ -103,8 +103,36 @@ sub find_bugs {
             $priority, $assignee_id, $is_closed, $is_pull, $num_comments,
             $deadline_unix, $created_unix, $updated_unix, $closed_unix);
 
-        # TODO: Add these!
-        #get_bugs_comments($token, $_->{id});
+        # Start processing all of the comments for this bug
+        my $comments      = get_bugs_comments($token, $_->{id});
+        my $comment_count = 0;
+
+        $query = $db_handle->prepare('SELECT id FROM issue WHERE issue.index=?');
+        $query->execute($index);
+        my $issue_id = $query->fetchrow_arrayref()->[0];
+
+        foreach my $comment (@$comments) {
+            $comment_count++;
+
+            if($GITEA_TRUNCATE_EMAILS_IN_HEADER) {
+                $comment->{creator} =~ s/\@.*//;
+            }
+
+            $content = "`[Migrated from bugzilla: bug $_->{id}]`";
+            $content .= "\r \n `[Posted by: $comment->{creator}]`";
+            $content .= "\r\n\r\n\r\n". $comment->{text};
+
+            $comment->{time} = str2time($comment->{time});
+
+            # Create the comment in Gitea's DB
+            $query = $db_handle->prepare('INSERT INTO comment VALUES (NULL,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
+            $query->execute(0, $GITEA_POSTER_ID, $issue_id, 0, 0, 0, 0, 0, "", "",
+                            0, 0, $content, $comment->{time}, $comment->{time}, "");
+        }
+
+        # Update the repo's count of issues
+        $query = $db_handle->prepare('UPDATE issue SET num_comments=? WHERE id=?');
+        $query->execute($comment_count, $issue_id);
     }
 
     # Update the repo count once we're done
@@ -119,7 +147,7 @@ sub find_bugs {
 sub get_bugs_comments {
     my $token      = shift;
     my $bug_id     = shift;
-    my $comment_id = shift // undef;
+    my $comment_id = shift // "";
 
     my $response;
     my $json;
@@ -128,6 +156,7 @@ sub get_bugs_comments {
     if($comment_id eq "") {
         $response  = $ua->get("$BUGZILLA_HOST/rest/bug/$bug_id/comment?token=$token");
         $json      = JSON::decode_json($response->decoded_content);
+        return $json->{bugs}->{$bug_id}->{comments};
     } else {
         $response  = $ua->get("$BUGZILLA_HOST/rest/bug/$bug_id/comment?token=$token&id_or_alias=$comment_id");
         $json      = JSON::decode_json($response->decoded_content);
