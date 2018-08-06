@@ -136,7 +136,7 @@ sub find_bugs {
     }
 
     # Update the repo count once we're done
-    $query = $db_handle->prepare('SELECT COUNT(id) FROM issue');
+    $query = $db_handle->prepare('SELECT COUNT(id) FROM issue WHERE is_closed=0');
     $query->execute();
     my $count = $query->fetchrow_array();
 
