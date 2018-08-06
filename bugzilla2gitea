@@ -133,7 +133,7 @@ sub find_bugs {
                             0, 0, $content, $comment->{time}, $comment->{time}, "");
         }
 
-        # Update the repo's count of issues
+        # Update the issue's count of comments
         $query = $db_handle->prepare('UPDATE issue SET num_comments=? WHERE id=?');
         $query->execute($comment_count, $issue_id);
 
@@ -151,6 +151,7 @@ sub find_bugs {
     $query->execute();
     my $count = $query->fetchrow_array();
 
+    # Update the repo's count of issues
     $query = $db_handle->prepare('UPDATE repository SET num_issues=? WHERE id=?');
     $query->execute($count, $GITEA_REPO_ID);
 }
