@@ -44,6 +44,7 @@ $ua->env_proxy;
 sub get_token {
     my $response = $ua->get("$BUGZILLA_HOST/rest/login?login=$BUGZILLA_USER&password=$BUGZILLA_PASS");
     my $token    = JSON::decode_json($response->decoded_content)->{token};
+    # TODO: error handling
     return $token;
 }
 
@@ -101,6 +102,9 @@ sub find_bugs {
         $query->execute($GITEA_REPO_ID, $index, $GITEA_POSTER_ID, $name, $content, $milestone_id,
             $priority, $assignee_id, $is_closed, $is_pull, $num_comments,
             $deadline_unix, $created_unix, $updated_unix, $closed_unix);
+
+        # TODO: Add these!
+        #get_bugs_comments($token, $_->{id});
     }
 
     # Update the repo count once we're done
@@ -147,3 +151,6 @@ sub connect_to_mysql() {
 
 my $token = get_token();
 find_bugs($token);
+
+# TODO: Get who /keywords or whiteboard/comments, attachments
+# TODO: Remember to do a header for comments too
