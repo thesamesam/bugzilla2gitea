@@ -1,0 +1,149 @@
+#!/usr/bin/perl
+# NAME: bugzilla2gitea
+# AUTHOR: sam <sam@cmpct.info>
+# Converts Bugzilla bugs into Gitea issues
+# Uses Bugzilla's REST API to grab bugs/comments, but modifies Gitea via the database (not API) to preserve dates etc
+
+# NOTE: Ideally run this before any issues are added at all to the given project, or even to the instance.
+# NOTE: Avoid running this on a live site (i.e. use script before it is public facing)
+# NOTE: Take a backup of the Gitea database before running.
+
+use strict;
+use warnings;
+use LWP::UserAgent;
+use JSON;
+use DBI;
+use Date::Parse;
+
+use Data::Dumper;
+
+# Config
+my $BUGZILLA_HOST = "https://bugzilla.example.com/";
+my $BUGZILLA_USER = "bugzilla_account\@example.com";
+my $BUGZILLA_PASS = "password";
+my $BUGZILLA_PROJ = "myproject";
+
+my $GITEA_MYSQL_HOST = "127.0.0.1";
+my $GITEA_MYSQL_USER = "gitea";
+my $GITEA_MYSQL_PASS = "password";
+my $GITEA_MYSQL_DB   = "gitea";
+
+# NOTE: You need to find these from the 'user' and 'repository' tables in MySQL for the user you want to pretend to post as (and the target repo)
+my $GITEA_POSTER_ID  = 1;
+my $GITEA_REPO_ID    = 2;
+
+# NOTE: Set this to 1 (yes) or 0 (no) for truncating emails of original reporter/assignee to before the @, e.g: sam@ (anti-spam)
+my $GITEA_TRUNCATE_EMAILS_IN_HEADER = 1;
+# End config
+
+my $ua = LWP::UserAgent->new;
+$ua->timeout(10);
+$ua->env_proxy;
+
+# Bugzilla functions
+sub get_token {
+    my $response = $ua->get("$BUGZILLA_HOST/rest/login?login=$BUGZILLA_USER&password=$BUGZILLA_PASS");
+    my $token    = JSON::decode_json($response->decoded_content)->{token};
+    return $token;
+}
+
+sub find_bugs {
+    my $token    = shift;
+    my $response = $ua->get("$BUGZILLA_HOST/rest/bug?token=$token&product=$BUGZILLA_PROJ");
+    my $json     = JSON::decode_json($response->decoded_content);
+
+    my $db_handle = connect_to_mysql();
+    my $json_bugs = $json->{bugs};
+    my $n         = @$json_bugs;
+    my $i         = 0;
+    my $query;
+
+    # Find last used index and go from there
+    # HACK: trying to just get index as a column failed for locally
+    $query = $db_handle->prepare('SELECT * FROM issue WHERE id=(SELECT MAX(id) FROM issue)');
+    $query->execute();
+    my $index = $query->fetchrow_arrayref()->[2];
+
+    foreach(@$json_bugs) {
+        $i++;
+        $index++;
+
+        my $poster_id      = 1;
+        my $name           = $_->{summary};
+
+        if($GITEA_TRUNCATE_EMAILS_IN_HEADER) {
+            $_->{creator}     =~ s/\@.*//;
+            $_->{assigned_to} =~ s/\@.*//;
+        }
+
+        # TODO: Could use a Markdown table?
+        my $content        = "`[Migrated from bugzilla: bug $_->{id}]`";
+        $content          .= "\r \n `[Reported by: $_->{creator}]`";
+        $content          .= "\r \n `[Assigned to: $_->{assigned_to}}`";
+        $content          .= "\r\n\r\n\r\n". get_bugs_comments($token, $_->{id}, 0);
+
+        my $milestone_id  = 0; # TODO: Could port milestones
+        my $priority      = 0;
+        my $assignee_id   = 0;
+        my $is_closed     = $_->{resolution} ~~ ["FIXED", "INVALID", "WONTFIX", "DUPLICATE", "WORKSFORME",
+                                "MOVED", "NOTABUG", "NOTOURBUG", "INSUFFICIENTDATA"] ? 1 : 0;
+        my $is_pull       = 0;
+        my $num_comments  = 0;
+        my $deadline_unix = 0;
+        my $created_unix  = str2time($_->{creation_time});
+        my $updated_unix  = str2time($_->{last_change_time});
+        my $closed_unix   = $is_closed ? $updated_unix : 0;
+
+        print "[$i/$n] [$BUGZILLA_PROJ] [$_->{assigned_to}] processing bug $_->{id}\r\n";
+
+        # Create the issue in Gitea's DB
+        $query = $db_handle->prepare('INSERT INTO issue VALUES (NULL,?,?,?,?,?,?,?,?,?,?,?,NULL,?,?,?,?)');
+        $query->execute($GITEA_REPO_ID, $index, $GITEA_POSTER_ID, $name, $content, $milestone_id,
+            $priority, $assignee_id, $is_closed, $is_pull, $num_comments,
+            $deadline_unix, $created_unix, $updated_unix, $closed_unix);
+    }
+
+    # Update the repo count once we're done
+    $query = $db_handle->prepare('SELECT COUNT(id) FROM issue');
+    $query->execute();
+    my $count = $query->fetchrow_array();
+
+    $query = $db_handle->prepare('UPDATE repository SET num_issues=? WHERE id=?');
+    $query->execute($count, $GITEA_REPO_ID);
+}
+
+sub get_bugs_comments {
+    my $token      = shift;
+    my $bug_id     = shift;
+    my $comment_id = shift // undef;
+
+    my $response;
+    my $json;
+
+    # Can grab an individual comment or all of them
+    if($comment_id eq "") {
+        $response  = $ua->get("$BUGZILLA_HOST/rest/bug/$bug_id/comment?token=$token");
+        $json      = JSON::decode_json($response->decoded_content);
+    } else {
+        $response  = $ua->get("$BUGZILLA_HOST/rest/bug/$bug_id/comment?token=$token&id_or_alias=$comment_id");
+        $json      = JSON::decode_json($response->decoded_content);
+        return $json->{bugs}->{$bug_id}->{comments}->[0]->{text};
+    }
+
+}
+
+# End Bugzilla
+
+# Start Gitea
+sub connect_to_mysql() {
+    # TODO: Could support other DBs
+    my $DBH = DBI->connect("DBI:mysql:database=$GITEA_MYSQL_DB;host=$GITEA_MYSQL_HOST",
+                            $GITEA_MYSQL_USER, $GITEA_MYSQL_PASS,
+                            {'RaiseError' => 1}) or die "Failed to connect to MySQL: $!";
+    return $DBH;
+}
+
+# End Gitea
+
+my $token = get_token();
+find_bugs($token);
