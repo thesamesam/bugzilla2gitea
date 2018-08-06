@@ -78,7 +78,7 @@ sub find_bugs {
         }
 
         # TODO: Could use a Markdown table?
-        my $content        = "`[Migrated from bugzilla: bug $_->{id}]`";
+        my $content        = "`[Migrated from Bugzilla: bug $_->{id}]`";
         $content          .= "\r \n `[Reported by: $_->{creator}]`";
         $content          .= "\r \n `[Assigned to: $_->{assigned_to}}`";
         $content          .= "\r\n\r\n\r\n". get_bugs_comments($token, $_->{id}, 0);
@@ -118,7 +118,7 @@ sub find_bugs {
                 $comment->{creator} =~ s/\@.*//;
             }
 
-            $content = "`[Migrated from bugzilla: bug $_->{id}]`";
+            $content = "`[Migrated from Bugzilla: bug $_->{id}]`";
             $content .= "\r \n `[Posted by: $comment->{creator}]`";
             $content .= "\r\n\r\n\r\n". $comment->{text};
 
