@@ -89,8 +89,9 @@ sub find_bugs {
         my $milestone_id  = 0; # TODO: Could port milestones
         my $priority      = 0;
         my $assignee_id   = 0;
-        my $is_closed     = $_->{resolution} ~~ ["FIXED", "INVALID", "WONTFIX", "DUPLICATE", "WORKSFORME",
-                                "MOVED", "NOTABUG", "NOTOURBUG", "INSUFFICIENTDATA"] ? 1 : 0;
+        my $resolution    = $_->{resolution};
+        my $is_closed     = (grep { $resolution eq $_ } ("FIXED", "INVALID", "WONTFIX", "DUPLICATE", "WORKSFORME",
+                                "MOVED", "NOTABUG", "NOTOURBUG", "INSUFFICIENTDATA")) ? 1 : 0;
         my $is_pull       = 0;
         my $num_comments  = 0;
         my $deadline_unix = 0;
