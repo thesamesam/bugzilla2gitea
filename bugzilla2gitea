@@ -34,6 +34,9 @@ my $GITEA_REPO_ID    = 2;
 
 # NOTE: Set this to 1 (yes) or 0 (no) for truncating emails of original reporter/assignee to before the @, e.g: sam@ (anti-spam)
 my $GITEA_TRUNCATE_EMAILS_IN_HEADER = 1;
+# NOTE: Set this to 1 (yes) or 0 (no) to write a list of Bugzila Bug IDs with their corresponding new Gitea IDs (useful for redirects etc)
+my $CREATE_BZ_TO_GITEA_MAP          = 1;
+my $CREATE_BZ_TO_GITEA_MAP_FILE     = "bugzilla2gitea_old_to_new.csv";
 # End config
 
 my $ua = LWP::UserAgent->new;
@@ -133,6 +136,14 @@ sub find_bugs {
         # Update the repo's count of issues
         $query = $db_handle->prepare('UPDATE issue SET num_comments=? WHERE id=?');
         $query->execute($comment_count, $issue_id);
+
+        # Write the Bugzilla ID -> Gitea ID to a file (if enabled)
+        if($CREATE_BZ_TO_GITEA_MAP) {
+            # Note that we use $index (not $issue_id) because the index is used externally to refer to a Gitea issue
+            open(my $CREATE_BZ_TO_GITEA_MAP_FH, ">>", $CREATE_BZ_TO_GITEA_MAP_FILE) or die "Couldn't open map file: $!";
+            print $CREATE_BZ_TO_GITEA_MAP_FH "$BUGZILLA_PROJ,$_->{id},$index\r\n";
+            close($CREATE_BZ_TO_GITEA_MAP_FH);
+        }
     }
 
     # Update the repo count once we're done
