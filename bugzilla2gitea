@@ -63,10 +63,10 @@ sub find_bugs {
 
     # Find last used index and go from there
     # HACK: trying to just get index as a column failed for locally
-    $query = $db_handle->prepare('SELECT * FROM issue WHERE id=(SELECT MAX(id) FROM issue)');
-    $query->execute();
+    $query = $db_handle->prepare('SELECT * FROM issue WHERE id=(SELECT MAX(id) FROM issue) AND repo_id=?');
+    $query->execute($GITEA_REPO_ID);
     my $result = $query->fetchrow_arrayref();
-    my $index  = undef $result ? 0 : $result->[2]; # default to zero if no issues exist
+    my $index  = undef $result ? 0 : $result->[2]; # default to 0 if no issues previously existed
 
     foreach(@$json_bugs) {
         $i++;
