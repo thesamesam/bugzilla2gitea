@@ -10,12 +10,11 @@
 
 use strict;
 use warnings;
-use LWP::UserAgent;
-use JSON;
-use DBI;
-use Date::Parse;
 
-use Data::Dumper;
+use Date::Parse;
+use DBI;
+use JSON;
+use LWP::UserAgent;
 
 # Config
 my $BUGZILLA_HOST = "https://bugzilla.example.com/";
@@ -66,13 +65,13 @@ sub find_bugs {
     # HACK: trying to just get index as a column failed for locally
     $query = $db_handle->prepare('SELECT * FROM issue WHERE id=(SELECT MAX(id) FROM issue)');
     $query->execute();
-    my $index = $query->fetchrow_arrayref()->[2];
+    my $result = $query->fetchrow_arrayref();
+    my $index  = undef $result ? 0 : $result->[2]; # default to zero if no issues exist
 
     foreach(@$json_bugs) {
         $i++;
         $index++;
 
-        my $poster_id      = 1;
         my $name           = $_->{summary};
 
         if($GITEA_TRUNCATE_EMAILS_IN_HEADER) {
@@ -148,8 +147,8 @@ sub find_bugs {
     }
 
     # Update the repo count once we're done
-    $query = $db_handle->prepare('SELECT COUNT(id) FROM issue WHERE is_closed=0');
-    $query->execute();
+    $query = $db_handle->prepare('SELECT COUNT(id) FROM issue WHERE is_closed=0 AND repo_id=?');
+    $query->execute($GITEA_REPO_ID);
     my $count = $query->fetchrow_array();
 
     # Update the repo's count of issues
