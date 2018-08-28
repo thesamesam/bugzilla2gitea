@@ -110,8 +110,8 @@ sub find_bugs {
         my $comments      = get_bugs_comments($token, $_->{id});
         my $comment_count = 0;
 
-        $query = $db_handle->prepare('SELECT id FROM issue WHERE issue.index=?');
-        $query->execute($index);
+        $query = $db_handle->prepare('SELECT id FROM issue WHERE issue.index=? AND issue.repo_id=?');
+        $query->execute($index, $GITEA_REPO_ID);
         my $issue_id = $query->fetchrow_arrayref()->[0];
 
         foreach my $comment (@$comments) {
