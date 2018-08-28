@@ -114,6 +114,9 @@ sub find_bugs {
         $query->execute($index, $GITEA_REPO_ID);
         my $issue_id = $query->fetchrow_arrayref()->[0];
 
+        # Drop the first comment because this is the bug message, not a comment in Gitea's eyes (unlike Bugzilla)
+        shift @$comments;
+
         foreach my $comment (@$comments) {
             $comment_count++;
 
