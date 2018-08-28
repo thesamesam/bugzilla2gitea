@@ -130,6 +130,12 @@ sub find_bugs {
             $content .= "\r \n `[Posted by: $comment->{creator}]`";
             $content .= "\r\n\r\n\r\n". $comment->{text};
 
+            # NOTE: You may want to run some replacements here (e.g. old to new git links)
+            # This is an example to correct comments with Gitweb links to Gitea
+            #my $from = "https://git.cmpct.info/cmpctircd.NET.git/commit/";
+            #my $to   = "https://git.cmpct.info/cmpct/cmpctircd/commit/";
+            #$content =~ s/$from/$to/;
+
             $comment->{time} = str2time($comment->{time});
 
             # Create the comment in Gitea's DB
