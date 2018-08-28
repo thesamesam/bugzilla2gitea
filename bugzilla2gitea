@@ -204,5 +204,11 @@ sub connect_to_mysql() {
 my $token = get_token();
 find_bugs($token);
 
+print "\r\n";
+print "Conversion for $BUGZILLA_PROJ complete.\r\n";
+print "Notes:\r\n";
+print "=> If you have any attachments, consider using misc/archive_attachments.pl\r\n";
+print "=> If required, find the csv file with a map from old to new IDs at: $CREATE_BZ_TO_GITEA_MAP_FILE\r\n" if $CREATE_BZ_TO_GITEA_MAP;
+
 # TODO: Get who /keywords or whiteboard/comments, attachments
 # TODO: Remember to do a header for comments too

@@ -7,6 +7,11 @@ Set of tools to convert from Bugzilla to Gitea (possibly Gogs). Assumes Gitea is
 - Can keep a map of moved bugs to allow further migration e.g. attachments or link redirects
 - Small!
 
+## Attachments
+- See `misc/archive_attachments.pl`. Use with the optional CSV that `bugzilla2gitea` can create.
+- Retrieves attachments from Bugzilla's database, allows you to post them to a web server.
+- Posts links on the corresponding Gitea bugs for the old Bugzilla attachments.
+
 ## Caveats
 - Modifies Gitea's database raw in order to preserve metadata such as dates.
 - Doesn't transfer attachments (yet - likely to be a separate script).
