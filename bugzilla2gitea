@@ -158,13 +158,13 @@ sub find_bugs {
     }
 
     # Update the repo count once we're done
-    $query = $db_handle->prepare('SELECT COUNT(id) FROM issue WHERE is_closed=0 AND repo_id=?');
+    $query = $db_handle->prepare('SELECT COUNT(id) FROM issue WHERE repo_id=? AND is_closed=1');
     $query->execute($GITEA_REPO_ID);
-    my $count = $query->fetchrow_array();
+    my $closed_count = $query->fetchrow_array();
 
     # Update the repo's count of issues
-    $query = $db_handle->prepare('UPDATE repository SET num_issues=? WHERE id=?');
-    $query->execute($count, $GITEA_REPO_ID);
+    $query = $db_handle->prepare('UPDATE repository SET num_issues=?,num_closed_issues=? WHERE id=?');
+    $query->execute($i, $closed_count, $GITEA_REPO_ID);
 }
 
 sub get_bugs_comments {
