@@ -134,7 +134,7 @@ sub find_bugs {
             # This is an example to correct comments with Gitweb links to Gitea
             #my $from = "https://git.cmpct.info/cmpctircd.NET.git/commit/";
             #my $to   = "https://git.cmpct.info/cmpct/cmpctircd/commit/";
-            #$content =~ s/$from/$to/;
+            #$content =~ s/$from/$to/g;
 
             $comment->{time} = str2time($comment->{time});
 
