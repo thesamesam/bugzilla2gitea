@@ -72,7 +72,7 @@ sub find_bugs {
         $i++;
         $index++;
 
-        my $name           = $_->{summary};
+        my $name = $_->{summary};
 
         if($GITEA_TRUNCATE_EMAILS_IN_HEADER) {
             $_->{creator}     =~ s/\@.*//;
