@@ -29,6 +29,7 @@ my $GITEA_MYSQL_PASS = "password";
 my $GITEA_MYSQL_DB   = "gitea";
 
 # NOTE: You need to find these from the 'user' and 'repository' tables in MySQL for the user you want to pretend to post as (and the target repo)
+# NOTE: Have not tested $GITEA_POSTER_ID as an organisation, only a user.
 my $GITEA_POSTER_ID  = 1;
 my $GITEA_REPO_ID    = 2;
 
